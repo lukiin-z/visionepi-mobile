@@ -1,0 +1,44 @@
+VisionEPI Mobile — Sprint 2
+Advanced Programming & Mobile Dev
+Prof. Hete Caetano dos Santos
+FIAP — Engenharia de Computação — 3ECR — 2026
+
+========================================
+INTEGRANTES
+========================================
+Pedro Gonçalves   — RM 557936
+Lucas Baraldi     — RM 555407
+Lucas Zolla       — RM 557952
+Vitor Pantarotto  — RM 554961
+
+========================================
+LINKS
+========================================
+Repositório GitHub:
+https://github.com/SEU_USUARIO/visionepi-mobile
+
+Vídeo de demonstração (até 3 min):
+https://www.youtube.com/watch?v=SEU_VIDEO_ID
+
+========================================
+CHECKLIST DE ENTREGÁVEIS
+========================================
+[x] Projeto criado com Expo + TypeScript (blank-typescript)
+[x] Estrutura src/screens, src/components, src/types, src/data
+[x] Tipo DeteccaoEPI em src/types/index.ts (+ Alerta, ZonaRisco, TipoEPI)
+[x] Tela Home (Dashboard com KPIs e zonas de risco)
+[x] Tela Lista (lista de registros com filtros e busca)
+[x] Tela Detalhe (detalhe completo + remoção)
+[x] Tela Cadastro (formulário com validação)
+[x] Tela Alertas (alertas com marcação de resolvido)
+[x] Estado local com useState (DeteccoesContext + Context API)
+[x] Mock de dados em src/data/mock.ts (array tipado)
+[x] Fluxo funcional: criar -> salvar no estado -> exibir na lista -> ver detalhe
+[x] Componente RegistroCard (card reutilizável)
+[x] Componente StatusBadge (badge de status reutilizável)
+[x] Componente EmptyState
+[x] Componente AppHeader
+[x] React Navigation (Stack Navigator com 5 telas)
+[x] Design system em theme.ts (cores, tipografia, espaçamento)
+[x] README com instruções de execução, descrição e mock
+[x] Comentários "Futura integração" marcando onde conectar a API

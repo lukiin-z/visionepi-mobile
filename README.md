@@ -49,7 +49,7 @@ O **VisionEPI Mobile** é o frontend do sistema de detecção de uso de EPIs
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/SEU_USUARIO/visionepi-mobile.git
+git clone https://github.com/lukiin-z/visionepi-mobile.git
 cd visionepi-mobile
 
 # 2. Instale as dependências

@@ -15,7 +15,7 @@ Vitor Pantarotto  — RM 554961
 LINKS
 ========================================
 Repositório GitHub:
-https://github.com/SEU_USUARIO/visionepi-mobile
+https://github.com/lukiin-z/visionepi-mobile
 
 Vídeo de demonstração (até 3 min):
 https://www.youtube.com/watch?v=SEU_VIDEO_ID

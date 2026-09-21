@@ -1,44 +1,32 @@
 // ============================================================
 //  VisionEPI — Componente RegistroCard
-//  Exibe um registro de detecção de EPI na lista.
+//  Exibe um registro de detecção vindo da API na lista.
 // ============================================================
 
 import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { DeteccaoEpi, statusDoRisco, episAusentes, episPresentes } from "../types";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
-import { DeteccaoEPI } from "../types";
-import {
-  Colors,
-  StatusConfig,
-  EPILabels,
-  EPIIcons,
-  Typography,
-  Spacing,
-  Radius,
-  Shadow,
+  Colors, StatusConfig, EPILabels, EPIIcons,
+  Typography, Spacing, Radius, Shadow,
 } from "./theme";
 
 interface RegistroCardProps {
-  registro: DeteccaoEPI;
+  registro: DeteccaoEpi;
   onPress: (id: number) => void;
 }
 
 function formatarData(iso: string): string {
   const d = new Date(iso);
   const data = d.toLocaleDateString("pt-BR");
-  const hora = d.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   return `${data} às ${hora}`;
 }
 
 export function RegistroCard({ registro, onPress }: RegistroCardProps) {
-  const cfg = StatusConfig[registro.status];
+  const cfg = StatusConfig[statusDoRisco(registro.nivelRisco)];
+  const ausentes  = episAusentes(registro);
+  const presentes = episPresentes(registro);
 
   return (
     <TouchableOpacity
@@ -46,13 +34,12 @@ export function RegistroCard({ registro, onPress }: RegistroCardProps) {
       onPress={() => onPress(registro.id)}
       activeOpacity={0.75}
     >
-      {/* Barra lateral colorida */}
       <View style={[styles.sideBar, { backgroundColor: cfg.color }]} />
 
       <View style={styles.body}>
-        {/* Linha superior: operador + badge status */}
+        {/* Operador + badge de status */}
         <View style={styles.row}>
-          <Text style={styles.operador}>{registro.nome}</Text>
+          <Text style={styles.operador}>{registro.nomeOperador}</Text>
           <View style={[styles.badge, { backgroundColor: cfg.bg }]}>
             <Text style={[styles.badgeText, { color: cfg.color }]}>
               {cfg.emoji} {cfg.label}
@@ -60,17 +47,19 @@ export function RegistroCard({ registro, onPress }: RegistroCardProps) {
           </View>
         </View>
 
-        {/* Zona e câmera */}
+        {/* Setor e matrícula */}
         <View style={styles.row}>
-          <Text style={styles.metaText}>📍 {registro.zona}</Text>
-          <Text style={styles.metaText}>📷 {registro.camera}</Text>
+          <Text style={styles.metaText}>📍 {registro.setor}</Text>
+          <Text style={styles.metaText}>🪪 {registro.matricula}</Text>
         </View>
 
+        <Text style={styles.metaText}>📷 {registro.descricaoCamera}</Text>
+
         {/* EPIs ausentes — destaque */}
-        {registro.episAusentes.length > 0 && (
+        {ausentes.length > 0 && (
           <View style={styles.episRow}>
             <Text style={styles.episLabel}>Ausentes: </Text>
-            {registro.episAusentes.map((epi) => (
+            {ausentes.map((epi) => (
               <View key={epi} style={styles.epiChip}>
                 <Text style={styles.epiChipText}>
                   {EPIIcons[epi]} {EPILabels[epi]}
@@ -81,12 +70,10 @@ export function RegistroCard({ registro, onPress }: RegistroCardProps) {
         )}
 
         {/* EPIs presentes */}
-        {registro.episPresentes.length > 0 && (
+        {presentes.length > 0 && (
           <View style={styles.episRow}>
-            <Text style={[styles.episLabel, { color: Colors.normal }]}>
-              Presentes:{" "}
-            </Text>
-            {registro.episPresentes.map((epi) => (
+            <Text style={[styles.episLabel, { color: Colors.normal }]}>Presentes: </Text>
+            {presentes.map((epi) => (
               <View key={epi} style={[styles.epiChip, styles.epiChipOk]}>
                 <Text style={[styles.epiChipText, { color: Colors.normal }]}>
                   {EPIIcons[epi]} {EPILabels[epi]}
@@ -98,9 +85,9 @@ export function RegistroCard({ registro, onPress }: RegistroCardProps) {
 
         {/* Rodapé: data + confiança */}
         <View style={[styles.row, styles.footer]}>
-          <Text style={styles.footerText}>🕐 {formatarData(registro.data)}</Text>
+          <Text style={styles.footerText}>🕐 {formatarData(registro.dataDeteccao)}</Text>
           <Text style={styles.footerText}>
-            Confiança: {Math.round(registro.confianca * 100)}%
+            Confiança: {registro.confianca.toFixed(1)}% · Risco {registro.nivelRisco}/5
           </Text>
         </View>
       </View>
@@ -118,69 +105,29 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     ...Shadow.card,
   },
-  sideBar: {
-    width: 5,
-  },
-  body: {
-    flex: 1,
-    padding: Spacing.md,
-    gap: Spacing.xs,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  operador: {
-    ...Typography.h3,
-    fontSize: 15,
-  },
-  badge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  metaText: {
-    ...Typography.small,
-    color: Colors.textSecondary,
-  },
+  sideBar: { width: 5 },
+  body: { flex: 1, padding: Spacing.md, gap: Spacing.xs },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  operador: { ...Typography.h3, fontSize: 15 },
+  badge: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.full },
+  badgeText: { fontSize: 12, fontWeight: "600" },
+  metaText: { ...Typography.small, color: Colors.textSecondary },
   episRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: Spacing.xs,
-    marginTop: 2,
+    flexDirection: "row", alignItems: "center", flexWrap: "wrap",
+    gap: Spacing.xs, marginTop: 2,
   },
-  episLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: Colors.critico,
-  },
+  episLabel: { fontSize: 12, fontWeight: "600", color: Colors.critico },
   epiChip: {
     backgroundColor: Colors.criticoBg,
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
   },
-  epiChipOk: {
-    backgroundColor: Colors.normalBg,
-  },
-  epiChipText: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: Colors.critico,
-  },
+  epiChipOk: { backgroundColor: Colors.normalBg },
+  epiChipText: { fontSize: 11, fontWeight: "500", color: Colors.critico },
   footer: {
-    marginTop: Spacing.xs,
-    paddingTop: Spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    marginTop: Spacing.xs, paddingTop: Spacing.xs,
+    borderTopWidth: 1, borderTopColor: Colors.border,
   },
-  footerText: {
-    ...Typography.micro,
-  },
+  footerText: { ...Typography.micro },
 });

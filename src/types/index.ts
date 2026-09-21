@@ -1,91 +1,72 @@
 // ============================================================
 //  VisionEPI — Tipos TypeScript
-//  Modelagem baseada no domínio de segurança industrial
-//  Espelha as entidades do backend Oracle (TB_DETECCAO, etc.)
+//  Alinhados ao JSON retornado pela API Spring Boot (Sprint 1).
+//  GET /deteccoes → [{ id, nomeOperador, matricula, setor,
+//    descricaoCamera, dataDeteccao, capacete, colete, luva,
+//    oculos, botina, confianca, nivelRisco }]
 // ============================================================
 
-/**
- * Status de conformidade de EPI de um operador.
- * Mapeado diretamente ao campo ds_nivel_risco do backend.
- */
+/** Flag de EPI no backend: "S" = presente, "N" = ausente. */
+export type FlagEPI = "S" | "N";
+
+/** Tipos de EPI monitorados (mesmos campos fl_* da entidade JPA). */
+export type TipoEPI = "capacete" | "colete" | "luva" | "oculos" | "botina";
+
+/** Status de conformidade usado na UI — derivado do nivelRisco da API. */
 export type StatusEPI = "normal" | "alerta" | "critico";
 
 /**
- * Tipo de EPI monitorado pelo sistema de visão computacional.
+ * Detecção de EPI — espelha a entidade DeteccaoEpi do backend.
+ * Endpoint: /deteccoes
  */
-export type TipoEPI = "capacete" | "colete" | "luva";
-
-/**
- * Registro de detecção de EPI — entidade principal do app.
- * Equivale a TB_DETECCAO no banco Oracle.
- *
- * Futura integração: GET /api/deteccoes/:id
- */
-export type DeteccaoEPI = {
+export type DeteccaoEpi = {
   id: number;
-  /** Nome ou código anônimo do operador (sem dados biométricos — LGPD) */
-  nome: string;
-  /** Zona ou setor da planta onde a detecção ocorreu */
-  descricao: string;
-  /** Nível de risco calculado com base nos EPIs ausentes */
-  status: StatusEPI;
-  /** Timestamp da detecção — ISO 8601 */
-  data: string;
-  /** Câmera que registrou a detecção */
-  camera: string;
-  /** Zona de risco associada */
-  zona: string;
-  /** EPIs que estavam presentes na detecção */
-  episPresentes: TipoEPI[];
-  /** EPIs que estavam ausentes (causadores do alerta) */
-  episAusentes: TipoEPI[];
-  /** Percentual de confiança do modelo (0–1) */
+  nomeOperador: string;
+  matricula: string;
+  setor: string;
+  descricaoCamera: string;
+  /** ISO 8601 gerado pelo backend (@PrePersist) */
+  dataDeteccao: string;
+  capacete: FlagEPI;
+  colete: FlagEPI;
+  luva: FlagEPI;
+  oculos: FlagEPI;
+  botina: FlagEPI;
+  /** Percentual de confiança do modelo (0 a 100) */
   confianca: number;
+  /** Nível de risco 1–5 calculado pelo backend */
+  nivelRisco: number;
 };
 
 /**
- * Payload para criação de nova detecção (formulário de cadastro).
- * Futura integração: POST /api/deteccoes
+ * Payload de criação — o backend preenche dataDeteccao e nivelRisco.
+ * POST /deteccoes
  */
-export type NovaDeteccaoPayload = Omit<DeteccaoEPI, "id" | "data"> & {
-  data?: string; // se omitido, backend usa SYSDATE
-};
+export type NovaDeteccao = Omit<DeteccaoEpi, "id" | "dataDeteccao" | "nivelRisco">;
 
-/**
- * Alerta gerado automaticamente a partir de uma detecção.
- * Equivale a TB_ALERTA no banco Oracle.
- *
- * Futura integração: GET /api/alertas
- */
-export type Alerta = {
-  id: number;
-  idDeteccao: number;
-  tipoAlerta: "VIOLACAO_EPI" | "RISCO_POSTURAL" | "ZONA_PROIBIDA";
-  mensagem: string;
-  dataAlerta: string;
-  status: "PENDENTE" | "RESOLVIDO" | "EXPIRADO";
-};
+export const EPIS: TipoEPI[] = ["capacete", "colete", "luva", "oculos", "botina"];
 
-/**
- * Zona de risco da planta industrial.
- * Equivale a TB_ZONA_RISCO no banco Oracle.
- */
-export type ZonaRisco = {
-  id: number;
-  nome: string;
-  tipoRisco: string;
-  nivelRisco: StatusEPI;
-  percentualConformidade: number;
-};
+/** Converte o nivelRisco (1–5) da API no status usado pela UI. */
+export function statusDoRisco(nivelRisco: number): StatusEPI {
+  if (nivelRisco >= 4) return "critico";
+  if (nivelRisco >= 2) return "alerta";
+  return "normal";
+}
 
-/**
- * Parâmetros de navegação das telas (React Navigation).
- * Garante type-safety nos parâmetros de cada rota.
- */
+/** EPIs com flag "N" na detecção. */
+export function episAusentes(d: DeteccaoEpi): TipoEPI[] {
+  return EPIS.filter((epi) => d[epi] === "N");
+}
+
+/** EPIs com flag "S" na detecção. */
+export function episPresentes(d: DeteccaoEpi): TipoEPI[] {
+  return EPIS.filter((epi) => d[epi] === "S");
+}
+
+/** Parâmetros de navegação das telas (React Navigation). */
 export type RootStackParamList = {
   Home: undefined;
   Lista: undefined;
   Detalhe: { id: number };
   Cadastro: undefined;
-  Alertas: undefined;
 };

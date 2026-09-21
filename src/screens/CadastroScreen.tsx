@@ -1,10 +1,10 @@
 // ============================================================
 //  VisionEPI — Tela Cadastro de Registro
-//  Formulário para criar uma nova detecção de EPI.
-//  Futura integração: POST /api/deteccoes
+//  POST /deteccoes via camada de serviços.
+//  Estados tratados: salvando, erro e sucesso.
 // ============================================================
 
-import React, { useContext, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -18,92 +18,101 @@ import {
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { RootStackParamList, StatusEPI, TipoEPI } from "../types";
-import { DeteccoesContext } from "../navigation/DeteccoesContext";
+import { RootStackParamList, TipoEPI, EPIS, NovaDeteccao } from "../types";
+import { criar } from "../services/deteccaoService";
+import { BASE_URL } from "../services/api";
 import {
   Colors, Spacing, Typography, Radius, Shadow,
-  EPILabels, EPIIcons, StatusConfig,
+  EPILabels, EPIIcons,
 } from "../components/theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Cadastro">;
 
-const ZONAS = ["Soldagem A", "Soldagem B", "Caldeiraria", "Montagem", "Manutenção", "Entrada Principal", "Almoxarifado"];
-const CAMERAS = ["CAM-01", "CAM-02", "CAM-03", "CAM-04", "CAM-05", "CAM-06", "CAM-07"];
-const EPIS: TipoEPI[] = ["capacete", "colete", "luva"];
-const STATUS_OPTS: StatusEPI[] = ["normal", "alerta", "critico"];
+const SETORES = [
+  "Soldagem A", "Soldagem B", "Caldeiraria",
+  "Montagem", "Manutenção", "Entrada Principal", "Almoxarifado",
+];
+const CAMERAS = [
+  "CAM-01 - Entrada", "CAM-02 - Montagem", "CAM-03 - Soldagem",
+  "CAM-04 - Caldeiraria", "CAM-05 - Manutenção",
+];
 
 export function CadastroScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { adicionarRegistro } = useContext(DeteccoesContext);
 
-  const [nome,        setNome]        = useState("");
-  const [descricao,   setDescricao]   = useState("");
-  const [zona,        setZona]        = useState(ZONAS[0]);
-  const [camera,      setCamera]      = useState(CAMERAS[0]);
-  const [status,      setStatus]      = useState<StatusEPI>("normal");
-  const [episPresentes, setEpisPresentes] = useState<TipoEPI[]>(["capacete", "colete", "luva"]);
-  const [confianca,   setConfianca]   = useState("0.90");
-  const [salvando,    setSalvando]    = useState(false);
-
-  const episAusentes = EPIS.filter((e) => !episPresentes.includes(e));
+  const [nomeOperador, setNomeOperador] = useState("");
+  const [matricula,    setMatricula]    = useState("");
+  const [setor,        setSetor]        = useState(SETORES[0]);
+  const [camera,       setCamera]       = useState(CAMERAS[0]);
+  const [presentes,    setPresentes]    = useState<TipoEPI[]>([...EPIS]);
+  const [confianca,    setConfianca]    = useState("90");
+  const [salvando,     setSalvando]     = useState(false);
 
   function toggleEPI(epi: TipoEPI) {
-    setEpisPresentes((prev) =>
+    setPresentes((prev) =>
       prev.includes(epi) ? prev.filter((e) => e !== epi) : [...prev, epi]
     );
   }
 
-  function calcularStatusSugerido(): StatusEPI {
-    if (episAusentes.includes("capacete") && episAusentes.length > 1) return "critico";
-    if (episAusentes.length > 0) return "alerta";
-    return "normal";
-  }
-
-  function aplicarStatusSugerido() {
-    setStatus(calcularStatusSugerido());
-  }
-
   async function salvar() {
-    if (!nome.trim()) {
-      Alert.alert("Campo obrigatório", "Informe o código do operador.");
+    if (!nomeOperador.trim()) {
+      Alert.alert("Campo obrigatório", "Informe o nome do operador.");
       return;
     }
-    if (!descricao.trim()) {
-      Alert.alert("Campo obrigatório", "Informe uma descrição da detecção.");
+    if (!matricula.trim()) {
+      Alert.alert("Campo obrigatório", "Informe a matrícula do operador.");
       return;
     }
-    const conf = parseFloat(confianca);
-    if (isNaN(conf) || conf < 0 || conf > 1) {
-      Alert.alert("Valor inválido", "A confiança deve ser um número entre 0 e 1.");
+    const conf = parseFloat(confianca.replace(",", "."));
+    if (isNaN(conf) || conf < 0 || conf > 100) {
+      Alert.alert("Valor inválido", "A confiança deve ser um número entre 0 e 100.");
       return;
     }
 
-    setSalvando(true);
-    // Simula latência de API (substituir por fetch() na integração)
-    await new Promise((res) => setTimeout(res, 600));
-
-    adicionarRegistro({
-      nome: nome.trim().toUpperCase(),
-      descricao: descricao.trim(),
-      status,
-      camera,
-      zona,
-      episPresentes,
-      episAusentes,
+    // Monta o payload exatamente no formato esperado pelo backend.
+    const payload: NovaDeteccao = {
+      nomeOperador: nomeOperador.trim(),
+      matricula: matricula.trim().toUpperCase(),
+      setor,
+      descricaoCamera: camera,
+      capacete: presentes.includes("capacete") ? "S" : "N",
+      colete:   presentes.includes("colete")   ? "S" : "N",
+      luva:     presentes.includes("luva")     ? "S" : "N",
+      oculos:   presentes.includes("oculos")   ? "S" : "N",
+      botina:   presentes.includes("botina")   ? "S" : "N",
       confianca: conf,
-    });
+    };
 
-    setSalvando(false);
-    Alert.alert("✅ Sucesso", "Detecção registrada com sucesso!", [
-      { text: "Ver Lista", onPress: () => navigation.navigate("Lista") },
-      { text: "Novo Registro", onPress: () => resetForm() },
-    ]);
+    try {
+      setSalvando(true);
+      const criado = await criar(payload);
+      Alert.alert(
+        "✅ Sucesso",
+        "Detecção #" + criado.id + " registrada na API (nível de risco " +
+        criado.nivelRisco + "/5).",
+        [
+          { text: "Ver Lista", onPress: () => navigation.navigate("Lista") },
+          { text: "Novo Registro", onPress: resetForm },
+        ]
+      );
+    } catch (e) {
+      Alert.alert(
+        "Erro ao salvar",
+        "Não foi possível enviar o registro para " + BASE_URL +
+        ". Verifique se a API Spring Boot está rodando."
+      );
+    } finally {
+      setSalvando(false);
+    }
   }
 
   function resetForm() {
-    setNome(""); setDescricao(""); setZona(ZONAS[0]); setCamera(CAMERAS[0]);
-    setStatus("normal"); setEpisPresentes(["capacete", "colete", "luva"]);
-    setConfianca("0.90");
+    setNomeOperador("");
+    setMatricula("");
+    setSetor(SETORES[0]);
+    setCamera(CAMERAS[0]);
+    setPresentes([...EPIS]);
+    setConfianca("90");
   }
 
   return (
@@ -122,45 +131,43 @@ export function CadastroScreen({ navigation }: Props) {
             <Text style={styles.backText}>← Voltar</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>➕ Nova Detecção</Text>
-          <Text style={styles.headerSub}>Registrar manualmente uma detecção de EPI</Text>
+          <Text style={styles.headerSub}>POST /deteccoes — enviado para a API</Text>
         </View>
 
         <View style={styles.form}>
-          {/* Operador */}
-          <Field label="Código do Operador *">
+          <Field label="Nome do Operador *">
+            <TextInput
+              style={styles.input}
+              placeholder="ex: Carlos Silva"
+              placeholderTextColor={Colors.placeholder}
+              value={nomeOperador}
+              onChangeText={setNomeOperador}
+            />
+          </Field>
+
+          <Field label="Matrícula *">
             <TextInput
               style={styles.input}
               placeholder="ex: OP-117"
               placeholderTextColor={Colors.placeholder}
-              value={nome}
-              onChangeText={setNome}
+              value={matricula}
+              onChangeText={setMatricula}
               autoCapitalize="characters"
             />
           </Field>
 
-          {/* Zona */}
-          <Field label="Zona de Risco *">
-            <SelectorRow
-              options={ZONAS}
-              selected={zona}
-              onSelect={setZona}
-            />
+          <Field label="Setor *">
+            <SelectorRow options={SETORES} selected={setor} onSelect={setSetor} />
           </Field>
 
-          {/* Câmera */}
           <Field label="Câmera *">
-            <SelectorRow
-              options={CAMERAS}
-              selected={camera}
-              onSelect={setCamera}
-            />
+            <SelectorRow options={CAMERAS} selected={camera} onSelect={setCamera} />
           </Field>
 
-          {/* EPIs presentes */}
           <Field label="EPIs Detectados (marque os PRESENTES)">
             <View style={styles.epiRow}>
               {EPIS.map((epi) => {
-                const isPresente = episPresentes.includes(epi);
+                const isPresente = presentes.includes(epi);
                 return (
                   <TouchableOpacity
                     key={epi}
@@ -170,58 +177,27 @@ export function CadastroScreen({ navigation }: Props) {
                     ]}
                     onPress={() => toggleEPI(epi)}
                   >
-                    <Text style={[
-                      styles.epiToggleText,
-                      isPresente ? styles.epiToggleTextOn : styles.epiToggleTextOff,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.epiToggleText,
+                        isPresente ? styles.epiToggleTextOn : styles.epiToggleTextOff,
+                      ]}
+                    >
                       {EPIIcons[epi]}  {EPILabels[epi]}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
-            <TouchableOpacity
-              style={styles.suggestBtn}
-              onPress={aplicarStatusSugerido}
-            >
-              <Text style={styles.suggestText}>
-                💡 Status sugerido: {StatusConfig[calcularStatusSugerido()].label}
-              </Text>
-            </TouchableOpacity>
+            <Text style={styles.hint}>
+              💡 O nível de risco (1–5) é calculado pelo backend a partir dos EPIs ausentes.
+            </Text>
           </Field>
 
-          {/* Status */}
-          <Field label="Status de Risco *">
-            <View style={styles.statusRow}>
-              {STATUS_OPTS.map((s) => {
-                const cfg = StatusConfig[s];
-                const isActive = status === s;
-                return (
-                  <TouchableOpacity
-                    key={s}
-                    style={[
-                      styles.statusBtn,
-                      isActive && { backgroundColor: cfg.bg, borderColor: cfg.color },
-                    ]}
-                    onPress={() => setStatus(s)}
-                  >
-                    <Text style={[
-                      styles.statusBtnText,
-                      isActive && { color: cfg.color, fontWeight: "700" },
-                    ]}>
-                      {cfg.emoji} {cfg.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </Field>
-
-          {/* Confiança */}
-          <Field label="Confiança do Modelo (0.00 a 1.00)">
+          <Field label="Confiança do Modelo (0 a 100) *">
             <TextInput
               style={styles.input}
-              placeholder="ex: 0.92"
+              placeholder="ex: 94.5"
               placeholderTextColor={Colors.placeholder}
               value={confianca}
               onChangeText={setConfianca}
@@ -229,21 +205,6 @@ export function CadastroScreen({ navigation }: Props) {
             />
           </Field>
 
-          {/* Descrição */}
-          <Field label="Descrição da Detecção *">
-            <TextInput
-              style={[styles.input, styles.textarea]}
-              placeholder="Descreva o que foi detectado..."
-              placeholderTextColor={Colors.placeholder}
-              value={descricao}
-              onChangeText={setDescricao}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-          </Field>
-
-          {/* Botão salvar */}
           <TouchableOpacity
             style={[styles.saveBtn, salvando && styles.saveBtnDisabled]}
             onPress={salvar}
@@ -251,7 +212,7 @@ export function CadastroScreen({ navigation }: Props) {
             activeOpacity={0.85}
           >
             <Text style={styles.saveBtnText}>
-              {salvando ? "Salvando..." : "💾  Salvar Registro"}
+              {salvando ? "Enviando para a API..." : "💾  Salvar Registro"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -314,11 +275,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textPrimary,
   },
-  textarea: { minHeight: 80, paddingTop: Spacing.sm },
-  epiRow:   { flexDirection: "row", gap: Spacing.sm, flexWrap: "wrap" },
+  epiRow: { flexDirection: "row", gap: Spacing.sm, flexWrap: "wrap" },
   epiToggle: {
-    flex: 1,
-    minWidth: 90,
+    minWidth: 100,
+    flexGrow: 1,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.sm,
     borderRadius: Radius.md,
@@ -330,26 +290,7 @@ const styles = StyleSheet.create({
   epiToggleText:    { fontSize: 13, fontWeight: "600" },
   epiToggleTextOn:  { color: Colors.normal },
   epiToggleTextOff: { color: Colors.critico },
-  suggestBtn: {
-    marginTop: Spacing.xs,
-    alignSelf: "flex-start",
-    backgroundColor: "#EEF3FA",
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.sm + 2,
-    paddingVertical: 4,
-  },
-  suggestText: { fontSize: 12, color: Colors.blue, fontWeight: "500" },
-  statusRow: { flexDirection: "row", gap: Spacing.sm },
-  statusBtn: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
-    alignItems: "center",
-  },
-  statusBtnText: { fontSize: 12, fontWeight: "500", color: Colors.textSecondary },
+  hint: { fontSize: 12, color: Colors.textMuted, marginTop: Spacing.xs },
   saveBtn: {
     backgroundColor: Colors.blue,
     borderRadius: Radius.md,
@@ -383,7 +324,7 @@ const selStyles = StyleSheet.create({
     borderColor: Colors.border,
     backgroundColor: Colors.background,
   },
-  btnActive:    { backgroundColor: Colors.navy, borderColor: Colors.navy },
-  text:         { fontSize: 13, color: Colors.textSecondary },
-  textActive:   { color: Colors.white, fontWeight: "700" },
+  btnActive:  { backgroundColor: Colors.navy, borderColor: Colors.navy },
+  text:       { fontSize: 13, color: Colors.textSecondary },
+  textActive: { color: Colors.white, fontWeight: "700" },
 });

@@ -61,12 +61,16 @@ export const EPILabels: Record<string, string> = {
   capacete: "Capacete",
   colete:   "Colete",
   luva:     "Luvas",
+  oculos:   "Óculos",
+  botina:   "Botina",
 };
 
 export const EPIIcons: Record<string, string> = {
   capacete: "⛑️",
   colete:   "🦺",
   luva:     "🧤",
+  oculos:   "🥽",
+  botina:   "🥾",
 };
 
 export const Typography = {

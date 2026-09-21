@@ -1,36 +1,71 @@
 // ============================================================
 //  VisionEPI — Tela Home (Dashboard)
-//  Exibe resumo estatístico dos registros e alertas ativos.
+//  Duas chamadas simultâneas à API com Promise.all:
+//    GET /deteccoes                     → total e conformidade
+//    GET /deteccoes?nivelRiscoMinimo=4  → detecções críticas
+//  Estados tratados: carregando, erro (backend fora) e sucesso.
 // ============================================================
 
-import React, { useContext } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { RootStackParamList } from "../types";
-import { DeteccoesContext } from "../navigation/DeteccoesContext";
-import { alertasMock, zonasMock } from "../data/mock";
+import { RootStackParamList, DeteccaoEpi, statusDoRisco } from "../types";
+import { listar, listarPorRiscoMinimo } from "../services/deteccaoService";
+import { BASE_URL } from "../services/api";
 import { Colors, Spacing, Typography, Radius, Shadow } from "../components/theme";
 import { StatusBadge } from "../components/StatusBadge";
+import { EmptyState } from "../components/EmptyState";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
 export function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { registros } = useContext(DeteccoesContext);
 
-  const total    = registros.length;
-  const criticos = registros.filter((r) => r.status === "critico").length;
-  const alertas  = registros.filter((r) => r.status === "alerta").length;
-  const normais  = registros.filter((r) => r.status === "normal").length;
-  const conformidade = total > 0 ? Math.round((normais / total) * 100) : 100;
-  const alertasPendentes = alertasMock.filter((a) => a.status === "PENDENTE").length;
+  const [registros, setRegistros] = useState<DeteccaoEpi[]>([]);
+  const [criticas, setCriticas]   = useState<DeteccaoEpi[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const carregar = useCallback(async () => {
+    try {
+      setErro(null);
+      // Duas chamadas em paralelo (requisito da Sprint 3).
+      const [todas, deAltoRisco] = await Promise.all([
+        listar(),
+        listarPorRiscoMinimo(4),
+      ]);
+      setRegistros(todas);
+      setCriticas(deAltoRisco);
+    } catch (e) {
+      setErro(
+        "Não foi possível conectar ao backend em " + BASE_URL +
+        ". Suba a API Spring Boot e toque em Tentar novamente."
+      );
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setCarregando(true);
+      carregar();
+    }, [carregar])
+  );
+
+  const total     = registros.length;
+  const conformes = registros.filter((r) => statusDoRisco(r.nivelRisco) === "normal").length;
+  const atencao   = registros.filter((r) => statusDoRisco(r.nivelRisco) === "alerta").length;
+  const conformidade = total > 0 ? Math.round((conformes / total) * 100) : 100;
 
   return (
     <ScrollView
@@ -49,67 +84,77 @@ export function HomeScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.content}>
-        {/* KPI Cards */}
-        <Text style={styles.sectionTitle}>Resumo do Turno</Text>
-        <View style={styles.kpiGrid}>
-          <KPICard label="Conformidade" value={`${conformidade}%`} color={Colors.normal} bg={Colors.normalBg} />
-          <KPICard label="Críticos"     value={String(criticos)}   color={Colors.critico} bg={Colors.criticoBg} />
-          <KPICard label="Alertas"      value={String(alertas)}    color={Colors.alerta}  bg={Colors.alertaBg} />
-          <KPICard label="Alertas Pend." value={String(alertasPendentes)} color={Colors.blue} bg="#EEF3FA" />
-        </View>
-
-        {/* Ações rápidas */}
-        <Text style={styles.sectionTitle}>Ações</Text>
-        <View style={styles.actionsGrid}>
-          <ActionCard
-            emoji="📋"
-            label="Ver Registros"
-            onPress={() => navigation.navigate("Lista")}
-          />
-          <ActionCard
-            emoji="➕"
-            label="Novo Registro"
-            onPress={() => navigation.navigate("Cadastro")}
-          />
-          <ActionCard
-            emoji="🔔"
-            label="Alertas"
-            onPress={() => navigation.navigate("Alertas")}
-            badge={alertasPendentes > 0 ? String(alertasPendentes) : undefined}
-          />
-        </View>
-
-        {/* Zonas */}
-        <Text style={styles.sectionTitle}>Zonas de Risco</Text>
-        {zonasMock.map((zona) => (
-          <View key={zona.id} style={styles.zonaCard}>
-            <View style={styles.zonaInfo}>
-              <Text style={styles.zonaNome}>{zona.nome}</Text>
-              <Text style={styles.zonaTipo}>{zona.tipoRisco}</Text>
-            </View>
-            <View style={styles.zonaRight}>
-              <Text style={styles.zonaConf}>{zona.percentualConformidade}%</Text>
-              <StatusBadge status={zona.nivelRisco} size="sm" />
-            </View>
+        {/* Estado: carregando */}
+        {carregando && (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={Colors.blue} />
+            <Text style={styles.loadingText}>Consultando a API...</Text>
           </View>
-        ))}
+        )}
 
-        {/* Últimas detecções */}
-        <Text style={styles.sectionTitle}>Últimas Detecções</Text>
-        {registros.slice(0, 3).map((r) => (
-          <TouchableOpacity
-            key={r.id}
-            style={styles.miniCard}
-            onPress={() => navigation.navigate("Detalhe", { id: r.id })}
-            activeOpacity={0.75}
-          >
-            <View style={styles.miniCardLeft}>
-              <Text style={styles.miniOperador}>{r.nome}</Text>
-              <Text style={styles.miniZona}>📍 {r.zona}  •  📷 {r.camera}</Text>
+        {/* Estado: erro */}
+        {!carregando && erro && (
+          <View style={styles.center}>
+            <EmptyState emoji="📡" title="Backend indisponível" subtitle={erro} />
+            <TouchableOpacity
+              style={styles.retryBtn}
+              onPress={() => {
+                setCarregando(true);
+                carregar();
+              }}
+            >
+              <Text style={styles.retryText}>🔄  Tentar novamente</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Estado: sucesso */}
+        {!carregando && !erro && (
+          <>
+            <Text style={styles.sectionTitle}>Resumo do Turno</Text>
+            <View style={styles.kpiGrid}>
+              <KPICard label="Conformidade" value={conformidade + "%"}       color={Colors.normal}  bg={Colors.normalBg} />
+              <KPICard label="Detecções"    value={String(total)}            color={Colors.blue}    bg="#EEF3FA" />
+              <KPICard label="Críticas"     value={String(criticas.length)}  color={Colors.critico} bg={Colors.criticoBg} />
+              <KPICard label="Atenção"      value={String(atencao)}          color={Colors.alerta}  bg={Colors.alertaBg} />
             </View>
-            <StatusBadge status={r.status} size="sm" />
-          </TouchableOpacity>
-        ))}
+
+            <Text style={styles.sectionTitle}>Ações</Text>
+            <View style={styles.actionsGrid}>
+              <ActionCard emoji="📋" label="Ver Registros" onPress={() => navigation.navigate("Lista")} />
+              <ActionCard emoji="➕" label="Novo Registro" onPress={() => navigation.navigate("Cadastro")} />
+              <ActionCard
+                emoji="🚨"
+                label="Alto Risco"
+                onPress={() => navigation.navigate("Lista")}
+                badge={criticas.length > 0 ? String(criticas.length) : undefined}
+              />
+            </View>
+
+            <Text style={styles.sectionTitle}>Últimas Detecções</Text>
+            {registros.length === 0 && (
+              <Text style={styles.emptyText}>
+                Nenhuma detecção na API ainda — cadastre a primeira em "Novo Registro".
+              </Text>
+            )}
+            {registros.slice(-3).reverse().map((r) => (
+              <TouchableOpacity
+                key={r.id}
+                style={styles.miniCard}
+                onPress={() => navigation.navigate("Detalhe", { id: r.id })}
+                activeOpacity={0.75}
+              >
+                <View style={styles.miniCardLeft}>
+                  <Text style={styles.miniOperador}>{r.nomeOperador}</Text>
+                  <Text style={styles.miniZona}>
+                    📍 {r.setor}  •  📷 {r.descricaoCamera}
+                  </Text>
+                </View>
+                <StatusBadge status={statusDoRisco(r.nivelRisco)} size="sm" />
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
       </View>
     </ScrollView>
   );
@@ -143,7 +188,7 @@ function ActionCard({
 }
 
 const styles = StyleSheet.create({
-  scroll:   { flex: 1, backgroundColor: Colors.background },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   header: {
     backgroundColor: Colors.navy,
     paddingHorizontal: Spacing.md,
@@ -152,7 +197,17 @@ const styles = StyleSheet.create({
   headerTitle: { ...Typography.h1, color: Colors.white, fontSize: 26 },
   headerSub:   { color: "rgba(255,255,255,0.8)", fontSize: 13, marginTop: 2 },
   headerDate:  { color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 6 },
-  content:    { padding: Spacing.md, gap: Spacing.sm },
+  content: { padding: Spacing.md, gap: Spacing.sm },
+  center: { alignItems: "center", justifyContent: "center", paddingVertical: Spacing.xl },
+  loadingText: { ...Typography.small, marginTop: Spacing.sm },
+  retryBtn: {
+    backgroundColor: Colors.blue,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm + 2,
+  },
+  retryText: { color: Colors.white, fontWeight: "700" },
+  emptyText: { ...Typography.small, color: Colors.textMuted },
   sectionTitle: {
     ...Typography.h3,
     marginTop: Spacing.sm,
@@ -170,7 +225,6 @@ const styles = StyleSheet.create({
   },
   kpiValue: { fontSize: 28, fontWeight: "700" },
   kpiLabel: { fontSize: 12, fontWeight: "500", marginTop: 2 },
-
   actionsGrid: { flexDirection: "row", gap: Spacing.sm },
   actionCard: {
     flex: 1,
@@ -193,34 +247,17 @@ const styles = StyleSheet.create({
     right: 6,
   },
   actionBadgeText: { color: Colors.white, fontSize: 10, fontWeight: "700" },
-
-  zonaCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.xs,
-    ...Shadow.card,
-  },
-  zonaInfo: { flex: 1 },
-  zonaNome: { ...Typography.h3, fontSize: 14 },
-  zonaTipo: { ...Typography.small, marginTop: 2 },
-  zonaRight: { alignItems: "flex-end", gap: 4 },
-  zonaConf: { fontSize: 18, fontWeight: "700", color: Colors.navy },
-
   miniCard: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.md,
     padding: Spacing.md,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: Spacing.xs,
+    justifyContent: "space-between",
+    gap: Spacing.sm,
     ...Shadow.card,
   },
-  miniCardLeft: { flex: 1 },
+  miniCardLeft: { flex: 1, gap: 2 },
   miniOperador: { ...Typography.h3, fontSize: 14 },
-  miniZona:     { ...Typography.micro, marginTop: 3 },
+  miniZona: { ...Typography.small, color: Colors.textSecondary },
 });

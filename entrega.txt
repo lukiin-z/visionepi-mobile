@@ -1,44 +1,44 @@
-VisionEPI Mobile — Sprint 2
+VisionEPI Mobile - Sprint 3 (Integracao Frontend + Backend)
 Advanced Programming & Mobile Dev
 Prof. Hete Caetano dos Santos
-FIAP — Engenharia de Computação — 3ECR — 2026
+FIAP - Engenharia de Computacao - 3ECR - 2026
 
 ========================================
 INTEGRANTES
 ========================================
-Pedro Gonçalves   — RM 557936
-Lucas Baraldi     — RM 555407
-Lucas Zolla       — RM 557952
-Vitor Pantarotto  — RM 554961
+Pedro Goncalves   - RM 557936
+Lucas Baraldi     - RM 555407
+Lucas Zolla       - RM 557952
+Vitor Pantarotto  - RM 554961
 
 ========================================
 LINKS
 ========================================
-Repositório GitHub:
+App (Expo / React Native):
 https://github.com/lukiin-z/visionepi-mobile
 
-Vídeo de demonstração (até 3 min):
+API (Spring Boot / H2):
+https://github.com/lukiin-z/visionepi-api
+
+Video de demonstracao (ate 3 min):
 https://www.youtube.com/watch?v=SEU_VIDEO_ID
 
 ========================================
-CHECKLIST DE ENTREGÁVEIS
+CHECKLIST DE ENTREGAVEIS - SPRINT 3
 ========================================
-[x] Projeto criado com Expo + TypeScript (blank-typescript)
-[x] Estrutura src/screens, src/components, src/types, src/data
-[x] Tipo DeteccaoEPI em src/types/index.ts (+ Alerta, ZonaRisco, TipoEPI)
-[x] Tela Home (Dashboard com KPIs e zonas de risco)
-[x] Tela Lista (lista de registros com filtros e busca)
-[x] Tela Detalhe (detalhe completo + remoção)
-[x] Tela Cadastro (formulário com validação)
-[x] Tela Alertas (alertas com marcação de resolvido)
-[x] Estado local com useState (DeteccoesContext + Context API)
-[x] Mock de dados em src/data/mock.ts (array tipado)
-[x] Fluxo funcional: criar -> salvar no estado -> exibir na lista -> ver detalhe
-[x] Componente RegistroCard (card reutilizável)
-[x] Componente StatusBadge (badge de status reutilizável)
-[x] Componente EmptyState
-[x] Componente AppHeader
-[x] React Navigation (Stack Navigator com 5 telas)
-[x] Design system em theme.ts (cores, tipografia, espaçamento)
-[x] README com instruções de execução, descrição e mock
-[x] Comentários "Futura integração" marcando onde conectar a API
+[x] Backend Spring Boot em http://localhost:8080 (camadas, CRUD, H2 file)
+[x] @CrossOrigin nos controllers (CORS liberado para o Expo)
+[x] Axios instalado com: npx expo install axios
+[x] Camada de servicos: src/services/api.ts (baseURL, timeout, Content-Type)
+[x] src/services/deteccaoService.ts: listar, buscarPorId, criar (+ remover)
+[x] Nenhuma tela chama Axios nem monta URL
+[x] BASE_URL por plataforma (localhost / 10.0.2.2 / IP da maquina)
+[x] Mock removido (src/data/mock.ts e DeteccoesContext excluidos)
+[x] Lista: GET + useEffect/useFocusEffect
+[x] Cadastro: POST com payload Omit<DeteccaoEpi, "id"|"dataDeteccao"|"nivelRisco">
+[x] Detalhe: GET por ID
+[x] Estados de carregando, erro (backend fora) e sucesso em todas as telas
+[x] try/catch/finally em todas as chamadas
+[x] Promise.all na Home (duas chamadas simultaneas)
+[x] TypeScript alinhado ao JSON da API (npx tsc --noEmit sem erros)
+[x] README com endpoints, services, BASE_URL, teste da integracao e backend parado

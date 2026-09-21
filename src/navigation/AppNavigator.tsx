@@ -11,7 +11,6 @@ import { HomeScreen }     from "../screens/HomeScreen";
 import { ListaScreen }    from "../screens/ListaScreen";
 import { DetalheScreen }  from "../screens/DetalheScreen";
 import { CadastroScreen } from "../screens/CadastroScreen";
-import { AlertasScreen }  from "../screens/AlertasScreen";
 import { Colors } from "../components/theme";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -31,7 +30,6 @@ export function AppNavigator() {
         <Stack.Screen name="Lista"    component={ListaScreen} />
         <Stack.Screen name="Detalhe"  component={DetalheScreen} />
         <Stack.Screen name="Cadastro" component={CadastroScreen} />
-        <Stack.Screen name="Alertas"  component={AlertasScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

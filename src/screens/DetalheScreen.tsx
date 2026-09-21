@@ -1,9 +1,10 @@
 // ============================================================
 //  VisionEPI — Tela Detalhe do Registro
-//  Exibe todas as informações de uma detecção de EPI.
+//  GET /deteccoes/{id} via camada de serviços.
+//  Estados tratados: carregando, erro e sucesso.
 // ============================================================
 
-import React, { useContext } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,11 +12,16 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { RootStackParamList } from "../types";
-import { DeteccoesContext } from "../navigation/DeteccoesContext";
+import {
+  RootStackParamList, DeteccaoEpi,
+  statusDoRisco, episAusentes, episPresentes,
+} from "../types";
+import { buscarPorId, remover } from "../services/deteccaoService";
+import { BASE_URL } from "../services/api";
 import { StatusBadge } from "../components/StatusBadge";
 import { EmptyState } from "../components/EmptyState";
 import {
@@ -35,38 +41,79 @@ function formatarDataCompleta(iso: string): string {
 
 export function DetalheScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { registros, removerRegistro } = useContext(DeteccoesContext);
   const { id } = route.params;
 
-  const registro = registros.find((r) => r.id === id);
+  const [registro, setRegistro] = useState<DeteccaoEpi | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
-  if (!registro) {
-    return (
-      <EmptyState
-        emoji="❓"
-        title="Registro não encontrado"
-        subtitle="Este registro pode ter sido removido."
-      />
-    );
-  }
+  useEffect(() => {
+    async function carregar() {
+      try {
+        setErro(null);
+        const dados = await buscarPorId(id);
+        setRegistro(dados);
+      } catch (e) {
+        setErro(
+          "Não foi possível carregar a detecção #" + id + " em " + BASE_URL +
+          ". Verifique se a API Spring Boot está rodando."
+        );
+      } finally {
+        setCarregando(false);
+      }
+    }
+    carregar();
+  }, [id]);
 
   function confirmarRemocao() {
+    if (!registro) return;
     Alert.alert(
       "Remover Registro",
-      `Deseja remover a detecção do operador ${registro!.nome}? Esta ação não pode ser desfeita.`,
+      "Deseja remover a detecção do operador " + registro.nomeOperador + "?",
       [
         { text: "Cancelar", style: "cancel" },
         {
           text: "Remover",
           style: "destructive",
-          onPress: () => {
-            removerRegistro(id);
-            navigation.goBack();
+          onPress: async () => {
+            try {
+              await remover(id);
+              navigation.goBack();
+            } catch (e) {
+              Alert.alert("Erro", "Não foi possível remover o registro na API.");
+            }
           },
         },
       ]
     );
   }
+
+  if (carregando) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={Colors.blue} />
+        <Text style={styles.loadingText}>Carregando detecção #{id}...</Text>
+      </View>
+    );
+  }
+
+  if (erro || !registro) {
+    return (
+      <View style={styles.center}>
+        <EmptyState
+          emoji="📡"
+          title="Não foi possível carregar"
+          subtitle={erro ?? "Registro não encontrado na API."}
+        />
+        <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.retryText}>← Voltar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const ausentes  = episAusentes(registro);
+  const presentes = episPresentes(registro);
 
   return (
     <ScrollView
@@ -74,48 +121,42 @@ export function DetalheScreen({ route, navigation }: Props) {
       contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.xl }}
     >
       {/* Header colorido por status */}
-      <View
-        style={[
-          styles.headerBlock,
-          { paddingTop: insets.top + Spacing.sm },
-        ]}
-      >
+      <View style={[styles.headerBlock, { paddingTop: insets.top + Spacing.sm }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>← Voltar</Text>
         </TouchableOpacity>
-        <Text style={styles.headerOperador}>{registro.nome}</Text>
-        <Text style={styles.headerId}>ID #{registro.id}</Text>
-        <StatusBadge status={registro.status} size="lg" />
+        <Text style={styles.headerOperador}>{registro.nomeOperador}</Text>
+        <Text style={styles.headerId}>
+          ID #{registro.id} · Matrícula {registro.matricula}
+        </Text>
+        <StatusBadge status={statusDoRisco(registro.nivelRisco)} size="lg" />
       </View>
 
       <View style={styles.content}>
         {/* Localização */}
         <Section title="📍 Localização">
-          <InfoRow label="Zona de risco" value={registro.zona} />
-          <InfoRow label="Câmera"        value={registro.camera} />
+          <InfoRow label="Setor"  value={registro.setor} />
+          <InfoRow label="Câmera" value={registro.descricaoCamera} />
         </Section>
 
         {/* Detecção */}
         <Section title="🤖 Resultado da Detecção">
           <InfoRow
             label="Confiança do modelo"
-            value={`${Math.round(registro.confianca * 100)}%`}
-            highlight={registro.confianca >= 0.85}
+            value={registro.confianca.toFixed(1) + "%"}
+            highlight={registro.confianca >= 85}
           />
-          <InfoRow
-            label="Data e hora"
-            value={formatarDataCompleta(registro.data)}
-          />
-          <InfoRow label="Descrição" value={registro.descricao} />
+          <InfoRow label="Nível de risco" value={registro.nivelRisco + " / 5"} />
+          <InfoRow label="Data e hora" value={formatarDataCompleta(registro.dataDeteccao)} />
         </Section>
 
         {/* EPIs */}
         <Section title="⛑️ EPIs Verificados">
-          {registro.episPresentes.length > 0 && (
+          {presentes.length > 0 && (
             <View style={styles.episGroup}>
               <Text style={styles.episGroupLabel}>✅ Presentes</Text>
               <View style={styles.episChipsRow}>
-                {registro.episPresentes.map((epi) => (
+                {presentes.map((epi) => (
                   <View key={epi} style={[styles.epiChip, styles.epiChipOk]}>
                     <Text style={styles.epiChipOkText}>
                       {EPIIcons[epi]}  {EPILabels[epi]}
@@ -125,11 +166,11 @@ export function DetalheScreen({ route, navigation }: Props) {
               </View>
             </View>
           )}
-          {registro.episAusentes.length > 0 && (
+          {ausentes.length > 0 ? (
             <View style={styles.episGroup}>
               <Text style={styles.episGroupLabel}>❌ Ausentes</Text>
               <View style={styles.episChipsRow}>
-                {registro.episAusentes.map((epi) => (
+                {ausentes.map((epi) => (
                   <View key={epi} style={[styles.epiChip, styles.epiChipBad]}>
                     <Text style={styles.epiChipBadText}>
                       {EPIIcons[epi]}  {EPILabels[epi]}
@@ -138,8 +179,7 @@ export function DetalheScreen({ route, navigation }: Props) {
                 ))}
               </View>
             </View>
-          )}
-          {registro.episAusentes.length === 0 && (
+          ) : (
             <Text style={styles.allOkText}>
               ✅ Todos os EPIs identificados corretamente.
             </Text>
@@ -174,9 +214,7 @@ function InfoRow({
   return (
     <View style={infoStyles.row}>
       <Text style={infoStyles.label}>{label}</Text>
-      <Text
-        style={[infoStyles.value, highlight && { color: Colors.normal, fontWeight: "700" }]}
-      >
+      <Text style={[infoStyles.value, highlight && { color: Colors.normal, fontWeight: "700" }]}>
         {value}
       </Text>
     </View>
@@ -184,7 +222,19 @@ function InfoRow({
 }
 
 const styles = StyleSheet.create({
-  scroll:   { flex: 1, backgroundColor: Colors.background },
+  scroll: { flex: 1, backgroundColor: Colors.background },
+  center: {
+    flex: 1, alignItems: "center", justifyContent: "center",
+    padding: Spacing.md, backgroundColor: Colors.background,
+  },
+  loadingText: { ...Typography.small, marginTop: Spacing.sm },
+  retryBtn: {
+    backgroundColor: Colors.blue,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm + 2,
+  },
+  retryText: { color: Colors.white, fontWeight: "700" },
   headerBlock: {
     backgroundColor: Colors.navy,
     paddingHorizontal: Spacing.md,
@@ -195,13 +245,11 @@ const styles = StyleSheet.create({
   backText: { color: "rgba(255,255,255,0.8)", fontSize: 14 },
   headerOperador: { ...Typography.h1, color: Colors.white, fontSize: 22 },
   headerId:       { color: "rgba(255,255,255,0.6)", fontSize: 12 },
-  content:  { padding: Spacing.md, gap: Spacing.md },
+  content: { padding: Spacing.md, gap: Spacing.md },
   episGroup: { marginBottom: Spacing.sm },
   episGroupLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
+    fontSize: 13, fontWeight: "600",
+    color: Colors.textSecondary, marginBottom: Spacing.xs,
   },
   episChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.xs },
   epiChip: {
@@ -209,8 +257,8 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: Radius.full,
   },
-  epiChipOk:    { backgroundColor: Colors.normalBg },
-  epiChipBad:   { backgroundColor: Colors.criticoBg },
+  epiChipOk:  { backgroundColor: Colors.normalBg },
+  epiChipBad: { backgroundColor: Colors.criticoBg },
   epiChipOkText:  { fontSize: 13, color: Colors.normal,  fontWeight: "500" },
   epiChipBadText: { fontSize: 13, color: Colors.critico, fontWeight: "600" },
   allOkText: { color: Colors.normal, fontSize: 14, fontWeight: "500" },
@@ -228,11 +276,7 @@ const styles = StyleSheet.create({
 
 const sectionStyles = StyleSheet.create({
   container: {},
-  title: {
-    ...Typography.h3,
-    color: Colors.navy,
-    marginBottom: Spacing.xs,
-  },
+  title: { ...Typography.h3, color: Colors.navy, marginBottom: Spacing.xs },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.md,

@@ -67,6 +67,9 @@ Pressione `a` para o emulador Android, `i` para iOS, ou escaneie o QR code com o
 **Expo Go**. O backend precisa estar rodando.
 
 > O Axios foi instalado com `npx expo install axios` (não `npm install axios`).
+>
+> O projeto está no **Expo SDK 57** — o Expo Go do iOS só existe na versão mais
+> recente, então rodar em iPhone exige que o projeto esteja no mesmo SDK.
 
 ---
 
@@ -142,15 +145,16 @@ export async function listar(): Promise<DeteccaoEpi[]> {
 | Emulador Android           | `http://10.0.2.2:8080`        |
 | Celular físico (Expo Go)   | `http://<IP-DA-MAQUINA>:8080` |
 
-Em `src/services/api.ts` a escolha entre `localhost` e `10.0.2.2` é automática
-(`Platform.OS`). **Para rodar no celular físico**, troque a constante pelo IP da
-máquina, por exemplo:
+A constante fica em `src/services/api.ts`. Como a demonstração foi feita em um
+**celular físico** (iPhone + Expo Go), ela está apontando para o IP da máquina:
 
 ```typescript
-export const BASE_URL = "http://192.168.0.12:8080";
+export const BASE_URL = "http://192.168.0.201:8080";
 ```
 
-Celular e computador precisam estar na mesma rede Wi-Fi.
+Troque pelo IP da sua máquina (`ipconfig` no Windows) — celular e computador
+precisam estar na mesma rede Wi-Fi. Rodando só no emulador Android use
+`http://10.0.2.2:8080`; no simulador iOS ou na web, `http://localhost:8080`.
 
 ---
 
@@ -175,6 +179,27 @@ visionepi-mobile/
 
 O mock (`src/data/mock.ts`) e o `DeteccoesContext` foram **removidos** — a fonte de
 dados agora é exclusivamente a API.
+
+---
+
+## 🎥 Vídeo de demonstração
+
+<https://youtube.com/shorts/Eaq1BBPEKMM>
+
+Gravado no celular (iPhone + Expo Go), mostrando o app em funcionamento:
+a **lista carregada da API**, a **criação de um registro** (`POST /deteccoes`)
+e a **remoção** (`DELETE /deteccoes/{id}`).
+
+Os itens que não aparecem em tela no vídeo estão documentados aqui:
+
+| Item da sprint                          | Onde conferir                                      |
+|-----------------------------------------|----------------------------------------------------|
+| Camada de serviços (tela não chama Axios)| Seção "Camada de serviços" e `src/services/`       |
+| `BASE_URL` por plataforma                | Tabela em "BASE_URL por plataforma"                 |
+| `Promise.all` com duas chamadas          | `src/screens/HomeScreen.tsx` (dashboard)            |
+| Comportamento com o backend parado       | Seção "O que acontece se o backend estiver parado"  |
+| JSON cru da API                          | Seção "JSON da API (exemplo real)"                  |
+| Mock removido                            | `src/data/mock.ts` e `DeteccoesContext` excluídos   |
 
 ---
 
@@ -229,3 +254,4 @@ O Axios corta a espera em 10 s (`timeout`).
 
 - App (este repositório): <https://github.com/lukiin-z/visionepi-mobile>
 - API Spring Boot (Sprint 1): <https://github.com/lukiin-z/visionepi-api>
+- Vídeo de demonstração: <https://youtube.com/shorts/Eaq1BBPEKMM>

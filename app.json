@@ -3,28 +3,17 @@
     "name": "VisionEPI",
     "slug": "visionepi-mobile",
     "version": "1.0.0",
-    "sdkVersion": "54.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1F3864"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "br.com.fiap.visionepi"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1F3864"
-      },
       "package": "br.com.fiap.visionepi"
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    }
+    "plugins": [
+      "expo-status-bar"
+    ]
   }
 }

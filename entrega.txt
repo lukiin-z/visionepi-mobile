@@ -20,8 +20,13 @@ https://github.com/lukiin-z/visionepi-mobile
 API (Spring Boot / H2):
 https://github.com/lukiin-z/visionepi-api
 
-Video de demonstracao (ate 3 min):
-https://www.youtube.com/watch?v=SEU_VIDEO_ID
+Video de demonstracao:
+https://youtube.com/shorts/Eaq1BBPEKMM
+
+O video mostra o app rodando no celular (Expo Go / iPhone): listagem vinda
+da API, criacao de um registro (POST) e remocao (DELETE). Os demais itens
+da sprint - camada de servicos, BASE_URL por plataforma, Promise.all na Home
+e o comportamento com o backend parado - estao documentados no README.md.
 
 ========================================
 CHECKLIST DE ENTREGAVEIS - SPRINT 3
@@ -42,3 +47,5 @@ CHECKLIST DE ENTREGAVEIS - SPRINT 3
 [x] Promise.all na Home (duas chamadas simultaneas)
 [x] TypeScript alinhado ao JSON da API (npx tsc --noEmit sem erros)
 [x] README com endpoints, services, BASE_URL, teste da integracao e backend parado
+[x] Projeto atualizado para o Expo SDK 57 (exigencia do Expo Go no iOS)
+[x] Video de demonstracao gravado no celular

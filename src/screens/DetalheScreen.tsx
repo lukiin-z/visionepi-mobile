@@ -4,7 +4,7 @@
 //  Estados tratados: carregando, erro e sucesso.
 // ============================================================
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -47,23 +47,24 @@ export function DetalheScreen({ route, navigation }: Props) {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function carregar() {
-      try {
-        setErro(null);
-        const dados = await buscarPorId(id);
-        setRegistro(dados);
-      } catch (e) {
-        setErro(
-          "Não foi possível carregar a detecção #" + id + " em " + BASE_URL +
-          ". Verifique se a API Spring Boot está rodando."
-        );
-      } finally {
-        setCarregando(false);
-      }
+  const carregar = useCallback(async () => {
+    try {
+      setErro(null);
+      const dados = await buscarPorId(id);
+      setRegistro(dados);
+    } catch (e) {
+      setErro(
+        "Não foi possível carregar a detecção #" + id + " em " + BASE_URL +
+        ". Verifique se a API Spring Boot está rodando."
+      );
+    } finally {
+      setCarregando(false);
     }
-    carregar();
   }, [id]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
   function confirmarRemocao() {
     if (!registro) return;
@@ -105,8 +106,17 @@ export function DetalheScreen({ route, navigation }: Props) {
           title="Não foi possível carregar"
           subtitle={erro ?? "Registro não encontrado na API."}
         />
-        <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.retryText}>← Voltar</Text>
+        <TouchableOpacity
+          style={styles.retryBtn}
+          onPress={() => {
+            setCarregando(true);
+            carregar();
+          }}
+        >
+          <Text style={styles.retryText}>🔄  Tentar novamente</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.voltarBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.voltarText}>← Voltar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -235,6 +245,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm + 2,
   },
   retryText: { color: Colors.white, fontWeight: "700" },
+  voltarBtn: { marginTop: Spacing.sm, paddingVertical: Spacing.sm },
+  voltarText: { color: Colors.blue, fontWeight: "600" },
   headerBlock: {
     backgroundColor: Colors.navy,
     paddingHorizontal: Spacing.md,

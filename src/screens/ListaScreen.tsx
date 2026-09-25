@@ -87,6 +87,8 @@ export function ListaScreen({ navigation }: Props) {
         <Text style={styles.headerSub}>
           {carregando
             ? "Carregando da API..."
+            : erro
+            ? "Sem conexão com a API"
             : registros.length + " detecções vindas da API"}
         </Text>
       </View>
@@ -104,27 +106,29 @@ export function ListaScreen({ navigation }: Props) {
         />
       </View>
 
-      {/* Filtros */}
-      <View style={styles.filtrosRow}>
-        {FILTROS.map((f) => {
-          const count =
-            f.key === "todos"
-              ? registros.length
-              : registros.filter((r) => statusDoRisco(r.nivelRisco) === f.key).length;
-          const isActive = filtroAtivo === f.key;
-          return (
-            <TouchableOpacity
-              key={f.key}
-              style={[styles.filtroBtn, isActive && styles.filtroBtnActive]}
-              onPress={() => setFiltroAtivo(f.key)}
-            >
-              <Text style={[styles.filtroBtnText, isActive && styles.filtroBtnTextActive]}>
-                {f.emoji} {f.label} ({count})
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      {/* Filtros (ocultos no erro: as contagens seriam de uma carga anterior) */}
+      {!erro && (
+        <View style={styles.filtrosRow}>
+          {FILTROS.map((f) => {
+            const count =
+              f.key === "todos"
+                ? registros.length
+                : registros.filter((r) => statusDoRisco(r.nivelRisco) === f.key).length;
+            const isActive = filtroAtivo === f.key;
+            return (
+              <TouchableOpacity
+                key={f.key}
+                style={[styles.filtroBtn, isActive && styles.filtroBtnActive]}
+                onPress={() => setFiltroAtivo(f.key)}
+              >
+                <Text style={[styles.filtroBtnText, isActive && styles.filtroBtnTextActive]}>
+                  {f.emoji} {f.label} ({count})
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
       {/* Estado: carregando */}
       {carregando && (

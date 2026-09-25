@@ -236,14 +236,14 @@ app não usa (detalhes no README da API).
 Resposta `201 Created` (capacete + luva ausentes = 3 pontos → risco 3):
 
 ```json
-{"id":1,"nomeOperador":"Carlos Silva","matricula":"OP-117","setor":"Soldagem A","descricaoCamera":"CAM-03 - Soldagem","dataDeteccao":"<<PREENCHIDO_NO_GATE>>","capacete":"N","colete":"S","luva":"N","oculos":"S","botina":"S","confianca":94.5,"nivelRisco":3}
+{"id":1,"nomeOperador":"Carlos Silva","matricula":"OP-117","setor":"Soldagem A","descricaoCamera":"CAM-03 - Soldagem","dataDeteccao":"2026-09-25T17:12:59.1003364","capacete":"N","colete":"S","luva":"N","oculos":"S","botina":"S","confianca":94.5,"nivelRisco":3}
 ```
 
 **`GET /deteccoes?nivelRiscoMinimo=4`** — só as detecções críticas (aqui, um segundo
 registro sem capacete e sem colete):
 
 ```json
-[{"id":2,"nomeOperador":"Marina Costa","matricula":"OP-204","setor":"Caldeiraria","descricaoCamera":"CAM-04 - Caldeiraria","dataDeteccao":"<<PREENCHIDO_NO_GATE>>","capacete":"N","colete":"N","luva":"S","oculos":"S","botina":"S","confianca":88.0,"nivelRisco":4}]
+[{"id":2,"nomeOperador":"Marina Costa","matricula":"OP-204","setor":"Caldeiraria","descricaoCamera":"CAM-04 - Caldeiraria","dataDeteccao":"2026-09-25T17:12:59.228238","capacete":"N","colete":"N","luva":"S","oculos":"S","botina":"S","confianca":88.0,"nivelRisco":4}]
 ```
 
 **`POST` inválido** — `400 Bad Request` com a mensagem de cada campo rejeitado:
@@ -300,15 +300,12 @@ src/
      No PowerShell do Windows use `curl.exe` (o `curl` do PowerShell 5.1 é outro comando).
 6. Opcional: no console do H2 (seção 4), `SELECT * FROM DETECCAO_EPI` mostra a mesma linha.
 
-Para criar um registro sem o app — por exemplo, para testar a API isolada:
+Para criar um registro sem o app — por exemplo, para testar a API isolada — use um
+terminal bash (no Windows, o **Git Bash**, que vem com o Git; o PowerShell trata as
+aspas do JSON de outro jeito):
 
 ```bash
 curl -X POST http://localhost:8080/deteccoes -H "Content-Type: application/json" -d '{"nomeOperador":"Carlos Silva","matricula":"OP-117","setor":"Soldagem A","descricaoCamera":"CAM-03 - Soldagem","capacete":"N","colete":"S","luva":"N","oculos":"S","botina":"S","confianca":94.5}'
-```
-
-```powershell
-# Windows (PowerShell)
-Invoke-RestMethod -Method Post -Uri http://localhost:8080/deteccoes -ContentType "application/json" -Body '{"nomeOperador":"Carlos Silva","matricula":"OP-117","setor":"Soldagem A","descricaoCamera":"CAM-03 - Soldagem","capacete":"N","colete":"S","luva":"N","oculos":"S","botina":"S","confianca":94.5}'
 ```
 
 ---

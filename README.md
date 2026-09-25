@@ -313,8 +313,10 @@ curl -X POST http://localhost:8080/deteccoes -H "Content-Type: application/json"
 ## 10. Parar o backend e ver o app sem dados
 
 1. No terminal da API, `Ctrl+C`.
-2. No app, recarregue (tecla `r` no terminal do Expo) ou navegue: Home e Lista
-   consultam a API toda vez que ganham foco, e o Detalhe ao abrir.
+2. No app, recarregue (tecla `r` no terminal do Expo), puxe a Lista para baixo ou
+   navegue: Home e Lista consultam a API toda vez que ganham foco, e o Detalhe ao abrir.
+   Na Home em erro só existe o botão **Tentar novamente** (os atalhos de navegação
+   aparecem quando os dados carregam).
 
 | Tela | Enquanto tenta | Depois da falha |
 |---|---|---|

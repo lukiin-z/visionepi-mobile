@@ -66,38 +66,52 @@ cada; luva, óculos e botina, 1 ponto cada. 0 ponto → 1 · 1–2 → 2 · 3 �
 | Ferramenta | Versão | Observação |
 |---|---|---|
 | Java (JDK) | **17** (testado com Temurin 17.0.20) | Com JDK 25 o build **falha** (`cannot find symbol get...`: o Lombok da versão do Spring Boot 3.2.5 não roda nele). Use o 17. |
-| Maven | testado com 3.9.16 | `mvn -version` precisa mostrar `Java version: 17...` |
-| Node.js | testado com v24.19.0 (npm 11.17.0) | O React Native 0.86 exige Node `^20.19.4`, `^22.13.0`, `^24.3.0` ou `>= 25` |
-| Expo | SDK 57 (`expo` 57.0.24, fixado no `package-lock.json`) | instalado pelo `npm install`; nada global |
-| Onde rodar o app | **Expo Go** com suporte ao SDK 57 (celular), **emulador Android** (Android Studio) ou **simulador iOS** (Xcode, só macOS) | |
+| Maven | **não precisa instalar**: o repositório da API traz o Maven Wrapper (`mvnw` / `mvnw.cmd`), que baixa o Maven 3.9.16 na primeira execução | quem já tem Maven pode usar `mvn` no lugar de `./mvnw` |
+| Node.js | **v24 LTS** (testado com v24.19.0, npm 11.17.0) | O React Native 0.86 exige Node `^20.19.4`, `^22.13.0`, `^24.3.0` ou `>= 25` |
+| Expo CLI | SDK 57 (`expo` 57.0.24, fixado no `package-lock.json`) | vem com o `npm install` e roda via `npx expo`; nada global |
+| Onde rodar o app | **navegador** (Expo Web), **Expo Go** com suporte ao SDK 57 (celular), **emulador Android** (Android Studio) ou **simulador iOS** (Xcode, só macOS) | |
 
-Se houver mais de um JDK na máquina, aponte o `JAVA_HOME` para o 17 **no mesmo
-terminal** em que vai rodar o Maven:
+O wrapper usa o JDK do `JAVA_HOME`. Se houver mais de um JDK na máquina, aponte o
+`JAVA_HOME` para o 17 **no mesmo terminal** em que vai subir a API:
 
 ```powershell
 # Windows (PowerShell) — ajuste o caminho para o seu JDK 17
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.20.8-hotspot"
 $env:Path = "$env:JAVA_HOME\bin;$env:Path"
-mvn -version
+java -version
 ```
 
 ```bash
 # Linux / macOS — ajuste o caminho para o seu JDK 17
 export JAVA_HOME=/caminho/para/jdk-17
 export PATH="$JAVA_HOME/bin:$PATH"
-mvn -version
+java -version
 ```
+
+`java -version` precisa mostrar `17.x`.
 
 ---
 
 ## 4. Subir o backend (API Spring Boot)
 
+**Windows (PowerShell ou cmd):**
+
+```powershell
+git clone https://github.com/lukiin-z/visionepi-api.git
+cd visionepi-api
+.\mvnw.cmd spring-boot:run
+```
+
+**Linux / macOS:**
+
 ```bash
 git clone https://github.com/lukiin-z/visionepi-api.git
 cd visionepi-api
-mvn spring-boot:run
+./mvnw spring-boot:run
 ```
 
+- A primeira execução baixa o Maven e as dependências (alguns minutos); as seguintes
+  sobem em ~20 s.
 - A API está pronta quando o log mostra `Started VisionepiApplication`. Endereço:
   **<http://localhost:8080>**.
 - Teste no navegador: <http://localhost:8080/deteccoes> → devolve JSON (`[]` num
@@ -112,9 +126,22 @@ mvn spring-boot:run
 - CORS liberado para qualquer origem (`@CrossOrigin(origins = "*")` no controller).
 - Para parar: `Ctrl+C` no terminal da API.
 
-Problemas comuns: `Port 8080 was already in use` → há outro processo na porta 8080;
-`release version 17 not supported` ou `cannot find symbol get...` → o Maven está
-usando um JDK que não é o 17 (veja a seção 3).
+Problemas comuns:
+
+- `Port 8080 was already in use` → há outro processo na porta 8080.
+- `release version 17 not supported` ou `cannot find symbol get...` → o Maven está
+  usando um JDK que não é o 17 (veja a seção 3).
+- **Windows**: `Unable to start embedded Tomcat server` com
+  `Unable to establish loopback connection` / `Invalid argument: connect` no fim do log
+  → o JDK 17 cria um socket local (AF_UNIX) na pasta `%TEMP%`, e em algumas máquinas
+  essa pasta recusa o socket. Aponte para uma pasta vazia e suba de novo, no mesmo
+  terminal:
+
+  ```powershell
+  New-Item -ItemType Directory -Force C:\jdk-sock
+  $env:JAVA_TOOL_OPTIONS = "-Djdk.net.unixdomain.tmpdir=C:\jdk-sock"
+  .\mvnw.cmd spring-boot:run
+  ```
 
 Deixe esse terminal aberto e use outro para o app.
 
@@ -131,6 +158,9 @@ npx expo start
 
 No terminal do Expo:
 
+- `w` — abre no **navegador** em <http://localhost:8081> (ou suba direto com
+  `npx expo start --web`). É o jeito mais rápido de testar: não precisa de emulador nem
+  de `.env`. Para ver no tamanho de celular, use o modo dispositivo do navegador (F12).
 - `a` — abre no emulador Android (é preciso ter um emulador criado no Android Studio);
 - `i` — abre no simulador iOS (só macOS);
 - **celular físico** — escaneie o QR code com o Expo Go (Android) ou com a câmera
@@ -138,9 +168,9 @@ No terminal do Expo:
   não funciona.
 
 **`.env` (opcional)** — só é necessário quando o padrão automático da seção 6 não
-serve, como no celular físico. Crie um arquivo chamado `.env` na raiz de
-`visionepi-mobile` (ele está no `.gitignore`) com uma única linha, trocando pelo IP
-da sua máquina:
+serve, como no celular físico. Copie o modelo `.env.example` para `.env` na raiz de
+`visionepi-mobile` (o `.env` está no `.gitignore`) e deixe uma única linha ativa,
+trocando pelo IP da sua máquina:
 
 ```
 EXPO_PUBLIC_API_URL=http://192.168.0.10:8080
@@ -161,9 +191,6 @@ npx expo start --clear
 EXPO_PUBLIC_API_URL=http://192.168.0.10:8080 npx expo start --clear
 ```
 
-> O projeto não tem suporte a web configurado (`react-dom` e `react-native-web` não
-> estão nas dependências): rode no Expo Go, no emulador ou no simulador.
-
 ---
 
 ## 6. BASE_URL — para onde o app aponta
@@ -176,11 +203,13 @@ export const BASE_URL =
   (Platform.OS === "android" ? "http://10.0.2.2:8080" : "http://localhost:8080");
 ```
 
-Ou seja: se `EXPO_PUBLIC_API_URL` estiver definida, ela vence; senão o app escolhe
-sozinho pela plataforma.
+Ou seja: se `EXPO_PUBLIC_API_URL` estiver definida (no `.env` — modelo em
+`.env.example` — ou no terminal), ela vence; senão o app escolhe sozinho pela
+plataforma. **É o único lugar do código onde a URL da API aparece.**
 
 | Onde o app roda | BASE_URL | Precisa de `.env`? |
 |---|---|---|
+| Navegador (Expo Web) | `http://localhost:8080` | Não — padrão fora do Android |
 | Emulador Android | `http://10.0.2.2:8080` | Não — padrão no Android (`10.0.2.2` é o `localhost` do computador visto de dentro do emulador) |
 | Simulador iOS | `http://localhost:8080` | Não — padrão fora do Android |
 | Celular físico com Expo Go (Android ou iPhone) | `http://<IP-DA-MÁQUINA>:8080` | **Sim** — `EXPO_PUBLIC_API_URL=http://<IP-DA-MÁQUINA>:8080` |
@@ -202,15 +231,15 @@ As mensagens de erro do app mostram a BASE_URL que ele tentou acessar.
 ## 7. Endpoints usados pelo app
 
 Todas as chamadas saem de `src/services/deteccaoService.ts`, usando a instância Axios
-de `src/services/api.ts` (`timeout` de 10 s, `Content-Type: application/json`).
+de `src/services/api.ts` (`timeout` de 8 s, `Content-Type: application/json`).
 
-| Método | Rota | Tela | Respostas |
-|---|---|---|---|
-| `GET` | `/deteccoes` | Home, Lista | `200` + lista |
-| `GET` | `/deteccoes?nivelRiscoMinimo=4` | Home (KPI "Críticas") | `200` + lista filtrada |
-| `GET` | `/deteccoes/{id}` | Detalhe | `200` + objeto · `404` se o id não existe |
-| `POST` | `/deteccoes` | Cadastro | `201` + objeto criado · `400` + erro por campo |
-| `DELETE` | `/deteccoes/{id}` | Detalhe (botão Remover) | `204` · `404` se o id não existe |
+| Método | Rota | Corpo | Resposta | Tela |
+|---|---|---|---|---|
+| `GET` | `/deteccoes` | — | `200` + lista de detecções (`[]` se vazio) | Home, Lista |
+| `GET` | `/deteccoes?nivelRiscoMinimo=4` | — | `200` + lista só com risco ≥ 4 | Home (KPI "Críticas") |
+| `GET` | `/deteccoes/{id}` | — | `200` + detecção · `404` se o id não existe | Detalhe |
+| `POST` | `/deteccoes` | detecção sem `id`, `dataDeteccao` e `nivelRisco` (exemplo abaixo) | `201` + detecção criada (com `id`, `dataDeteccao`, `nivelRisco`) · `400` + erro por campo | Cadastro |
+| `DELETE` | `/deteccoes/{id}` | — | `204` sem corpo · `404` se o id não existe | Detalhe (botão Remover) |
 
 A API também expõe `PUT /deteccoes/{id}` e os filtros `?setor=` e `?matricula=`, que o
 app não usa (detalhes no README da API).
@@ -269,9 +298,10 @@ mostra vem da API.
 
 ```
 src/
-├── services/api.ts              # Axios: BASE_URL, timeout de 10 s, Content-Type JSON
+├── services/api.ts              # Axios: BASE_URL, timeout de 8 s, Content-Type JSON
 ├── services/deteccaoService.ts  # listar, buscarPorId, criar, listarPorRiscoMinimo, remover
 ├── types/index.ts               # tipos que espelham o JSON da API + statusDoRisco
+├── utils/alerta.ts              # Alert nativo no celular; window.alert/confirm no navegador
 ├── screens/                     # Home, Lista, Detalhe, Cadastro
 ├── components/                  # RegistroCard, StatusBadge, EmptyState, theme
 └── navigation/AppNavigator.tsx  # stack: Home → Lista / Detalhe / Cadastro
@@ -286,6 +316,8 @@ src/
    desmarque os EPIs **ausentes** e informe a **Confiança** (0 a 100).
 3. Toque em **💾 Salvar Registro**. O alerta **✅ Sucesso** mostra o **ID** e o
    **nível de risco** devolvidos pela API.
+   No navegador o aviso é uma caixa de confirmação: **OK** = Ver Lista,
+   **Cancelar** = Novo Registro.
 4. Toque em **Ver Lista**: o registro está lá (a busca filtra por nome ou matrícula).
    Tocar no card abre o Detalhe, que busca o registro pelo id na API.
 5. Confira direto na API, trocando `1` pelo ID mostrado no alerta:
@@ -312,8 +344,10 @@ curl -X POST http://localhost:8080/deteccoes -H "Content-Type: application/json"
 
 ## 10. Parar o backend e ver o app sem dados
 
-1. No terminal da API, `Ctrl+C`.
-2. No app, recarregue (tecla `r` no terminal do Expo), puxe a Lista para baixo ou
+1. No terminal da API, `Ctrl+C`. O log mostra o desligamento (`Closing JPA
+   EntityManagerFactory`, `HikariPool-1 - Shutdown completed`) e
+   <http://localhost:8080/deteccoes> passa a recusar a conexão.
+2. No app, recarregue (F5 no navegador, tecla `r` no terminal do Expo), puxe a Lista para baixo ou
    navegue: Home e Lista consultam a API toda vez que ganham foco, e o Detalhe ao abrir.
    Na Home em erro só existe o botão **Tentar novamente** (os atalhos de navegação
    aparecem quando os dados carregam).
@@ -325,16 +359,18 @@ curl -X POST http://localhost:8080/deteccoes -H "Content-Type: application/json"
 | Detalhe | spinner "Carregando detecção #id..." | 📡 **Não foi possível carregar** com a BASE_URL + **🔄 Tentar novamente** e **← Voltar**. |
 | Cadastro | botão "Enviando para a API..." | alerta **Erro ao salvar** — "Não foi possível enviar o registro para `<BASE_URL>`. Verifique se a API Spring Boot está rodando." Nada é gravado. |
 
-No emulador o erro aparece em instantes (conexão recusada). No celular físico pode
-levar até 10 s, o `timeout` do Axios, dependendo do firewall do computador.
+No navegador e no emulador o erro aparece em instantes (conexão recusada). No celular
+físico pode levar até 8 s, o `timeout` do Axios, dependendo do firewall do computador.
+O app nunca cai para dados locais: sem API, não há dados na tela.
 
-3. Suba a API de novo (`mvn spring-boot:run`) e toque em **Tentar novamente**: os
-   dados voltam, inclusive os cadastrados antes de parar, porque o H2 grava em arquivo.
+3. Suba a API de novo (`.\mvnw.cmd spring-boot:run` no Windows, `./mvnw spring-boot:run`
+   no Linux/macOS) e toque em **Tentar novamente**: os dados voltam, inclusive os
+   cadastrados antes de parar, porque o H2 grava em arquivo.
 
 ---
 
-## 11. Vídeo
+## 11. Vídeo de demonstração
 
-<<PREENCHER: link YouTube não listado>>
+LINK_DO_VIDEO_AQUI
 
 Roteiro da gravação: [`docs/roteiro-video.md`](docs/roteiro-video.md).

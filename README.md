@@ -131,17 +131,6 @@ Problemas comuns:
 - `Port 8080 was already in use` → há outro processo na porta 8080.
 - `release version 17 not supported` ou `cannot find symbol get...` → o Maven está
   usando um JDK que não é o 17 (veja a seção 3).
-- **Windows**: `Unable to start embedded Tomcat server` com
-  `Unable to establish loopback connection` / `Invalid argument: connect` no fim do log
-  → o JDK 17 cria um socket local (AF_UNIX) na pasta `%TEMP%`, e em algumas máquinas
-  essa pasta recusa o socket. Aponte para uma pasta vazia e suba de novo, no mesmo
-  terminal:
-
-  ```powershell
-  New-Item -ItemType Directory -Force C:\jdk-sock
-  $env:JAVA_TOOL_OPTIONS = "-Djdk.net.unixdomain.tmpdir=C:\jdk-sock"
-  .\mvnw.cmd spring-boot:run
-  ```
 
 Deixe esse terminal aberto e use outro para o app.
 
@@ -371,6 +360,25 @@ O app nunca cai para dados locais: sem API, não há dados na tela.
 
 ## 11. Vídeo de demonstração
 
-LINK_DO_VIDEO_AQUI
+https://youtu.be/f-LXk-2b-ao
 
 Roteiro da gravação: [`docs/roteiro-video.md`](docs/roteiro-video.md).
+
+---
+
+## 12. Solução de problemas
+
+**Opcional — só se o backend falhar no Windows com erro de socket no `%TEMP%`.** O
+sintoma é `Unable to start embedded Tomcat server` com
+`Unable to establish loopback connection` / `Invalid argument: connect` no fim do log:
+o JDK 17 cria um socket local (AF_UNIX) na pasta `%TEMP%`, e em algumas máquinas essa
+pasta recusa o socket. Nesse caso, aponte para uma pasta vazia e suba de novo, no mesmo
+terminal:
+
+```powershell
+New-Item -ItemType Directory -Force C:\jdk-sock
+$env:JAVA_TOOL_OPTIONS = "-Djdk.net.unixdomain.tmpdir=C:\jdk-sock"
+.\mvnw.cmd spring-boot:run
+```
+
+Sem esse erro, nada disso é necessário: use só o comando da seção 4.

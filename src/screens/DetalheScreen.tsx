@@ -11,7 +11,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -22,6 +21,7 @@ import {
 } from "../types";
 import { buscarPorId, remover } from "../services/deteccaoService";
 import { BASE_URL } from "../services/api";
+import { alerta } from "../utils/alerta";
 import { StatusBadge } from "../components/StatusBadge";
 import { EmptyState } from "../components/EmptyState";
 import {
@@ -68,7 +68,7 @@ export function DetalheScreen({ route, navigation }: Props) {
 
   function confirmarRemocao() {
     if (!registro) return;
-    Alert.alert(
+    alerta(
       "Remover Registro",
       "Deseja remover a detecção do operador " + registro.nomeOperador + "?",
       [
@@ -81,7 +81,7 @@ export function DetalheScreen({ route, navigation }: Props) {
               await remover(id);
               navigation.goBack();
             } catch (e) {
-              Alert.alert("Erro", "Não foi possível remover o registro na API.");
+              alerta("Erro", "Não foi possível remover o registro na API.");
             }
           },
         },

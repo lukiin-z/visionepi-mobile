@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -20,7 +19,8 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RootStackParamList, TipoEPI, EPIS, NovaDeteccao } from "../types";
 import { criar } from "../services/deteccaoService";
-import { BASE_URL } from "../services/api";
+import { BASE_URL, errosDeValidacao } from "../services/api";
+import { alerta } from "../utils/alerta";
 import {
   Colors, Spacing, Typography, Radius, Shadow,
   EPILabels, EPIIcons,
@@ -56,16 +56,16 @@ export function CadastroScreen({ navigation }: Props) {
 
   async function salvar() {
     if (!nomeOperador.trim()) {
-      Alert.alert("Campo obrigatório", "Informe o nome do operador.");
+      alerta("Campo obrigatório", "Informe o nome do operador.");
       return;
     }
     if (!matricula.trim()) {
-      Alert.alert("Campo obrigatório", "Informe a matrícula do operador.");
+      alerta("Campo obrigatório", "Informe a matrícula do operador.");
       return;
     }
     const conf = parseFloat(confianca.replace(",", "."));
     if (isNaN(conf) || conf < 0 || conf > 100) {
-      Alert.alert("Valor inválido", "A confiança deve ser um número entre 0 e 100.");
+      alerta("Valor inválido", "A confiança deve ser um número entre 0 e 100.");
       return;
     }
 
@@ -86,7 +86,7 @@ export function CadastroScreen({ navigation }: Props) {
     try {
       setSalvando(true);
       const criado = await criar(payload);
-      Alert.alert(
+      alerta(
         "✅ Sucesso",
         "Detecção #" + criado.id + " registrada na API (nível de risco " +
         criado.nivelRisco + "/5).",
@@ -96,7 +96,12 @@ export function CadastroScreen({ navigation }: Props) {
         ]
       );
     } catch (e) {
-      Alert.alert(
+      const recusa = errosDeValidacao(e);
+      if (recusa) {
+        alerta("Registro recusado pela API", recusa);
+        return;
+      }
+      alerta(
         "Erro ao salvar",
         "Não foi possível enviar o registro para " + BASE_URL +
         ". Verifique se a API Spring Boot está rodando."
@@ -142,6 +147,7 @@ export function CadastroScreen({ navigation }: Props) {
               placeholderTextColor={Colors.placeholder}
               value={nomeOperador}
               onChangeText={setNomeOperador}
+              maxLength={100}
             />
           </Field>
 
@@ -152,6 +158,7 @@ export function CadastroScreen({ navigation }: Props) {
               placeholderTextColor={Colors.placeholder}
               value={matricula}
               onChangeText={setMatricula}
+              maxLength={20}
               autoCapitalize="characters"
             />
           </Field>

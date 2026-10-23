@@ -3,7 +3,7 @@
 > **Publicação no YouTube: visibilidade NÃO LISTADO.**
 > Não use **Privado** (o professor não consegue abrir) e não publique como **Shorts**:
 > grave na **horizontal** (16:9, ex.: 1920×1080). Depois de publicar, copie o link e
-> substitua `<<PREENCHER: link YouTube não listado>>` na seção 11 do `README.md`.
+> substitua `LINK_DO_VIDEO_AQUI` na seção 11 do `README.md`.
 
 Duração alvo: **até 5 minutos**. Os tempos abaixo somam 4:50.
 
@@ -11,7 +11,7 @@ Duração alvo: **até 5 minutos**. Os tempos abaixo somam 4:50.
 
 ## Antes de gravar (não entra no tempo)
 
-1. **Banco com dados.** Suba a API uma vez (`mvn spring-boot:run` em `visionepi-api`),
+1. **Banco com dados.** Suba a API uma vez (em `visionepi-api`: `.\mvnw.cmd spring-boot:run` no Windows, `./mvnw spring-boot:run` no Linux/macOS),
    crie dois registros com os comandos abaixo (Git Bash) e pare a API com `Ctrl+C`.
    Como o H2 grava em arquivo, eles vão aparecer quando a API subir no vídeo.
 
@@ -53,14 +53,14 @@ subir backend, subir app, BASE_URL, endpoints). Clique no link do `visionepi-api
 
 ```bash
 cd visionepi-api
-mvn spring-boot:run
+./mvnw spring-boot:run   # Windows: .\mvnw.cmd spring-boot:run
 ```
 
 Espere aparecer `Started VisionepiApplication`. **Navegador:** recarregue
 `http://localhost:8080/deteccoes` e mostre o JSON com os dois registros.
 
 **Fala sugerida:**
-> "Subimos a API com `mvn spring-boot:run`, em Java 17, na porta 8080. No navegador, o
+> "Subimos a API com o Maven Wrapper (`mvnw spring-boot:run`), em Java 17, na porta 8080. No navegador, o
 > GET em `/deteccoes` devolve o JSON. Esses dois registros foram criados antes da gravação
 > e continuam aqui depois de reiniciar a API, porque o H2 grava em arquivo, na pasta `data`."
 
